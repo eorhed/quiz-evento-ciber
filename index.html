@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KASAP Cyber Challenge</title>
+  <style>
+    :root {
+      --bg: #0b1329;
+      --card: #1c2541;
+      --accent: #00e676;
+      --accent-hover: #00c853;
+      --text: #ffffff;
+      --danger: #ff5252;
+      --warning: #ffb300;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    .card {
+      background: var(--card);
+      padding: 1.8rem;
+      border-radius: 16px;
+      max-width: 450px;
+      width: 100%;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+      text-align: center;
+    }
+    h1 { color: var(--accent); margin-top: 0; font-size: 1.6rem; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.8rem;
+      margin: 0.8rem 0;
+      border-radius: 8px;
+      border: 1px solid #3a4775;
+      background: #0b1329;
+      color: #fff;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .btn {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 0.9rem 1.2rem;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+    }
+    .option-btn {
+      background: #2a3459;
+      color: var(--text);
+      border: 1px solid #3a4775;
+      text-align: left;
+      font-weight: normal;
+      margin-top: 0.6rem;
+    }
+    .hidden { display: none; }
+    .trap-alert {
+      background: rgba(255, 82, 82, 0.15);
+      border: 1px solid var(--danger);
+      padding: 1rem;
+      border-radius: 8px;
+      color: #ff8a80;
+      text-align: left;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    .feedback {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+    .correct { background: rgba(0, 230, 118, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+    .incorrect { background: rgba(255, 82, 82, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.6rem;
+      background: #2a3459;
+      border-radius: 12px;
+      font-size: 0.8rem;
+    }
+    .leaderboard {
+      margin-top: 1rem;
+      background: #0b1329;
+      padding: 0.8rem;
+      border-radius: 8px;
+      text-align: left;
+    }
+    .leaderboard ol { padding-left: 1.2rem; margin: 0.5rem 0 0 0; }
+    .leaderboard li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- PANTALLA TRAMPA / REGISTRO -->
+  <div id="trap-screen">
+    <span class="badge">Evento KASAP Security Challenge</span>
+    <h1 style="color: var(--danger); margin-top: 0.5rem;">⚠️ ¡HAS CAÍDO EN LA TRAMPA!</h1>
+    
+    <div class="trap-alert">
+      <strong>🚨 Vulnerabilidad Detectada (Quishing):</strong><br>
+      Escaneaste un código QR físico sin verificar su destino. En el mundo real, podrías haber descargado malware.
+    </div>
+
+    <p style="font-size: 0.9rem; color: #cbd5e1;">Tu marcador empieza con <strong style="color: var(--danger);">-50 PUNTOS</strong>.</p>
+
+    <input type="text" id="player-name" placeholder="Tu Nombre o Alias para el Ranking" required>
+    <button class="btn" onclick="validateUser()">Aceptar Reto y Recuperar Puntos</button>
+  </div>
+
+  <!-- PANTALLA QUIZ -->
+  <div id="quiz-screen" class="hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span class="badge" id="progress">Pregunta 1/10</span>
+      <span class="badge" id="score-tag" style="color: var(--warning);">Puntos: -50</span>
+    </div>
+
+    <h2 id="question-title" style="font-size: 1.05rem; margin: 1rem 0; text-align: left; line-height: 1.4;"></h2>
+    <div id="options-container"></div>
+    <div id="feedback" class="feedback hidden"></div>
+    <button id="next-btn" class="btn hidden" onclick="nextQuestion()">Siguiente Pregunta</button>
+  </div>
+
+  <!-- PANTALLA FINAL -->
+  <div id="end-screen" class="hidden">
+    <h1>🏆 Reto Finalizado</h1>
+    <p>Tu puntuación final es:</p>
+    <h2 id="final-score" style="font-size: 2.8rem; margin: 0.2rem 0; color: var(--accent);">0 pts</h2>
+    <p id="final-message" style="font-size: 0.9rem; color: #cbd5e1;"></p>
+
+    <div class="leaderboard">
+      <strong style="color: var(--accent);">🥇 Top 5 del Evento:</strong>
+      <ol id="ranking-list">Cargando clasificación...</ol>
+    </div>
+
+    <button class="btn" onclick="restartGame()">Volver a Jugar</button>
+  </div>
+
+</div>
+
+<script>
+  // REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
+  const SCRIPT_URL = "PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT";
+
+  const questions = [
+    {
+      q: "1. Recibes un correo urgente de 'Soporte TI' pidiéndote verificar tu contraseña en un enlace adjunto. ¿Qué haces?",
+      options: [
+        { text: "Hago clic e introduzco mis credenciales.", correct: false },
+        { text: "Verifico el remitente real, inspecciono el enlace y reporto a TI.", correct: true },
+        { text: "Lo reenvío a mis compañeros para consultarles.", correct: false }
+      ],
+      explain: "¡Correcto! Es Phishing. Nunca introduzcas contraseñas desde enlaces directos."
+    },
+    {
+      q: "2. Estás en una cafetería conectado a su Wi-Fi pública. ¿Es seguro acceder a la red corporativa?",
+      options: [
+        { text: "Sí, siempre que la web utilice HTTPS.", correct: false },
+        { text: "No, a menos que utilices una VPN corporativa activa.", correct: true },
+        { text: "Sí, el navegador me avisa si hay riesgo.", correct: false }
+      ],
+      explain: "¡Exacto! En redes abiertas cualquiera puede interceptar la conexión."
+    },
+    {
+      q: "3. Encuentras un pendrive en una mesa de reuniones etiquetado como 'Presupuestos'. ¿Qué haces?",
+      options: [
+        { text: "Lo conecto a mi equipo para ver de quién es.", correct: false },
+        { text: "Lo conecto y paso el antivirus.", correct: false },
+        { text: "No lo conecto y se lo entrego al área de TI.", correct: true }
+      ],
+      explain: "¡Excelente! Los USBs abandonados pueden ejecutar scripts maliciosos de forma automática."
+    },
+    {
+      q: "4. Recibes una llamada del 'Soporte Técnico' pidiéndote el código SMS que te acaba de llegar. ¿Qué haces?",
+      options: [
+        { text: "Le facilito el código, son de soporte.", correct: false },
+        { text: "Cuelgo, no comparto el código y verifico con TI.", correct: true },
+        { text: "Le pido que vuelva a llamar en unos minutos.", correct: false }
+      ],
+      explain: "¡Bien! Es Vishing. Ningún técnico legítimo te pedirá códigos de verificación."
+    },
+    {
+      q: "5. Te ausentas de tu puesto 3 minutos para ir a buscar agua. ¿Cómo dejas el equipo?",
+      options: [
+        { text: "Lo dejo encendido, vuelvo de inmediato.", correct: false },
+        { text: "Bloqueo la pantalla inmediatamente (Win+L).", correct: true },
+        { text: "Cierro la tapa del portátil sin bloquear la sesión.", correct: false }
+      ],
+      explain: "¡Correcto! El acceso físico no autorizado solo toma segundos."
+    },
+    {
+      q: "6. Te llega una factura no esperada en un archivo .zip o documento con macros .docm. ¿Qué riesgo corres?",
+      options: [
+        { text: "Ninguno si el antivirus está actualizado.", correct: false },
+        { text: "Riesgo de ejecución de Ransomware que cifre la red.", correct: true },
+        { text: "Solo saltará publicidad emergente.", correct: false }
+      ],
+      explain: "¡Exacto! Los archivos con macros son el vector clásico del Ransomware."
+    },
+    {
+      q: "7. Quieres resumir un informe confidencial usando la versión pública de ChatGPT. ¿Es seguro?",
+      options: [
+        { text: "Sí, los datos se borran al cerrar el navegador.", correct: false },
+        { text: "No, la información puede usarse para entrenar el modelo y quedar expuesta.", correct: true },
+        { text: "Sí, mientras no ponga el nombre de la empresa.", correct: false }
+      ],
+      explain: "¡Así es! Subir datos sensibles a IAs públicas supone una fuga de información."
+    },
+    {
+      q: "8. ¿Cuál es la forma más segura de gestionar tus contraseñas profesionales?",
+      options: [
+        { text: "Usar la misma contraseña compleja para todo.", correct: false },
+        { text: "Anotarlas en una libreta en mi cajón.", correct: false },
+        { text: "Utilizar contraseñas únicas en un Gestor de Contraseñas.", correct: true }
+      ],
+      explain: "¡Correcto! Reutilizar claves compromete tus accesos si cae un servicio externo."
+    },
+    {
+      q: "9. Al escanear el QR del evento se descarga automáticamente un archivo .apk o .exe. ¿Qué haces?",
+      options: [
+        { text: "Abrir el archivo para ver la presentación.", correct: false },
+        { text: "Cancelar la descarga, borrar el archivo y notificar al personal.", correct: true },
+        { text: "Guardar el archivo para abrirlo luego en el PC.", correct: false }
+      ],
+      explain: "¡Muy bien! Ningún QR debe forzar descargas directas de ejecutables."
+    },
+    {
+      q: "10. Haces clic por error en un enlace sospechoso. ¿Cuál es la acción correcta?",
+      options: [
+        { text: "Apagar el equipo y no decir nada a nadie.", correct: false },
+        { text: "Notificar inmediatamente a Ciberseguridad/TI.", correct: true },
+        { text: "Intentar formatear el portátil por tu cuenta.", correct: false }
+      ],
+      explain: "¡Excelente! El reporte rápido permite aislar las amenazas a tiempo."
+    }
+  ];
+
+  let currentQ = 0;
+  let score = -50;
+  let playerName = "";
+
+  function validateUser() {
+    const input = document.getElementById('player-name');
+    if (!input.value.trim()) {
+      alert("Por favor, introduce tu nombre para registrar la partida.");
+      return;
+    }
+    playerName = input.value.trim();
+    document.getElementById('trap-screen').classList.add('hidden');
+    document.getElementById('quiz-screen').classList.remove('hidden');
+    showQuestion();
+  }
+
+  function showQuestion() {
+    const q = questions[currentQ];
+    document.getElementById('progress').innerText = `Pregunta ${currentQ + 1} de ${questions.length}`;
+    document.getElementById('score-tag').innerText = `Puntos: ${score}`;
+    document.getElementById('question-title').innerText = q.q;
+    
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    
+    const feedback = document.getElementById('feedback');
+    feedback.className = 'feedback hidden';
+    document.getElementById('next-btn').classList.add('hidden');
+
+    q.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'btn option-btn';
+      btn.innerText = opt.text;
+      btn.onclick = () => selectOption(opt.correct, q.explain);
+      container.appendChild(btn);
+    });
+  }
+
+  function selectOption(isCorrect, explain) {
+    const feedback = document.getElementById('feedback');
+    const buttons = document.querySelectorAll('.option-btn');
+    buttons.forEach(b => b.disabled = true);
+
+    if (isCorrect) {
+      score += 15;
+      feedback.innerText = explain;
+      feedback.className = 'feedback correct';
+    } else {
+      feedback.innerText = "❌ Incorrecto. " + explain;
+      feedback.className = 'feedback incorrect';
+    }
+
+    document.getElementById('score-tag').innerText = `Puntos: ${score}`;
+    feedback.classList.remove('hidden');
+    document.getElementById('next-btn').classList.remove('hidden');
+  }
+
+  function nextQuestion() {
+    currentQ++;
+    if (currentQ < questions.length) {
+      showQuestion();
+    } else {
+      showEnd();
+    }
+  }
+
+  async function showEnd() {
+    document.getElementById('quiz-screen').classList.add('hidden');
+    document.getElementById('end-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = `${score} pts`;
+    
+    let msg = score >= 80 
+      ? "🥇 ¡Extraordinario! Demostraste un nivel avanzado de ciberdefensa."
+      : "⚠️ Buen intento, pero debes prestar más atención a los vectores de entrada.";
+    document.getElementById('final-message').innerText = msg;
+
+    // Guardar datos en Google Sheets y cargar ranking
+    if (SCRIPT_URL !== "PEGA_AQUI_TU_URL_DE_GOOGLE_APPS_SCRIPT") {
+      try {
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ nombre: playerName, puntuacion: score })
+        });
+
+        const res = await fetch(SCRIPT_URL);
+        const leaderboard = await res.json();
+        
+        const list = document.getElementById('ranking-list');
+        list.innerHTML = leaderboard.map(item => `<li><strong>${item.nombre}</strong>: ${item.puntuacion} pts</li>`).join('');
+      } catch (err) {
+        document.getElementById('ranking-list').innerHTML = "No se pudo cargar la tabla de clasificación.";
+      }
+    }
+  }
+
+  function restartGame() {
+    currentQ = 0;
+    score = -50;
+    document.getElementById('end-screen').classList.add('hidden');
+    document.getElementById('trap-screen').classList.remove('hidden');
+  }
+</script>
+</body>
+</html>
